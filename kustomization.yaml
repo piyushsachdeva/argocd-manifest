@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - postgres-config.yaml
+  - postgres-pvc.yaml
+  - postgres.yaml
+  - backend-config.yaml
+  - backend.yaml
+  - frontend-config.yaml
+  - frontend.yaml
+
+namespace: 3tirewebapp-dev
+
+commonLabels:
+  app.kubernetes.io/name: 3tirewebapp
+  app.kubernetes.io/part-of: 3tirewebapp
+
+images:
+  - name: itsbaivab/frontend
+    newTag: latest
+  - name: itsbaivab/backend
+    newTag: latest

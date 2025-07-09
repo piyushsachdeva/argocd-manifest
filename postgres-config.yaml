@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: 3tirewebapp-dev
+data:
+  POSTGRES_DB: goalsdb
+  POSTGRES_USER: postgres
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+  namespace: 3tirewebapp-dev
+type: Opaque
+data:
+  POSTGRES_PASSWORD: cG9zdGdyZXM= # base64 encoded "postgres"

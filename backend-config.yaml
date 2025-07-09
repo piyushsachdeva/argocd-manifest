@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: 3tirewebapp-dev
+data:
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_NAME: goalsdb
+  DB_USERNAME: postgres
+  SSL: disable
+  PORT: "8080"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backend-secret
+  namespace: 3tirewebapp-dev
+type: Opaque
+data:
+  DB_PASSWORD: cG9zdGdyZXM= # base64 encoded "postgres"
