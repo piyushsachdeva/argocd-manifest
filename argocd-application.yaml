@@ -8,7 +8,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/itsBaivab/gitops-configs.git
+    repoURL: https://github.com/piyushsachdeva/argocd-manifest.git
     targetRevision: HEAD
     path: 3tire-configs
   destination:
