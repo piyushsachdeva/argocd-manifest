@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/piyushsachdeva/argocd-manifest.git
     targetRevision: HEAD
-    path: 3tire-configs
+    path: .
   destination:
     server: https://kubernetes.default.svc
     namespace: 3tirewebapp-dev
