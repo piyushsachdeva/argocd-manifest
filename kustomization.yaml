@@ -5,11 +5,12 @@ resources:
   - namespace.yaml
   - postgres-config.yaml
   - postgres-pvc.yaml
-  - postgres.yaml
+  - postgres-keyvault.yaml # Updated to use Key Vault integration
   - backend-config.yaml
-  - backend.yaml
+  - backend-keyvault.yaml # Updated to use Key Vault credentials
   - frontend-config.yaml
   - frontend.yaml
+  - key-vault-secrets.yaml
 
 namespace: 3tirewebapp-dev
 
@@ -19,6 +20,6 @@ commonLabels:
 
 images:
   - name: itsbaivab/frontend
-    newTag: latest
+    newTag: v2
   - name: itsbaivab/backend
     newTag: latest

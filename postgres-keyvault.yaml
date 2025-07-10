@@ -1,0 +1,145 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: 3tirewebapp-dev
+  labels:
+    app: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      serviceAccountName: postgres-sa
+      containers:
+        - name: postgres
+          image: postgres:15
+          ports:
+            - containerPort: 5432
+          env:
+            # Primary: Use Key Vault secrets if available
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials-from-kv
+                  key: POSTGRES_DB
+                  optional: true
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials-from-kv
+                  key: POSTGRES_USER
+                  optional: true
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials-from-kv
+                  key: POSTGRES_PASSWORD
+                  optional: true
+            # Fallback: Use traditional ConfigMap/Secret if Key Vault not available
+            - name: POSTGRES_DB_FALLBACK
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER_FALLBACK
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-config
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD_FALLBACK
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+          # Use init script to handle fallback logic
+          command: ["/bin/bash"]
+          args:
+            - -c
+            - |
+              # Use Key Vault secrets if available, otherwise fallback to traditional secrets
+              export POSTGRES_DB=${POSTGRES_DB:-$POSTGRES_DB_FALLBACK}
+              export POSTGRES_USER=${POSTGRES_USER:-$POSTGRES_USER_FALLBACK}
+              export POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-$POSTGRES_PASSWORD_FALLBACK}
+
+              echo "Starting PostgreSQL with database: $POSTGRES_DB, user: $POSTGRES_USER"
+              exec docker-entrypoint.sh postgres
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+              subPath: pgdata
+            # Mount Key Vault secrets as files (optional)
+            - name: key-vault-secrets
+              mountPath: /mnt/secrets-store
+              readOnly: true
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - exec pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" -h 127.0.0.1 -p 5432
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 6
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - exec pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" -h 127.0.0.1 -p 5432
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+        # Key Vault secrets volume (optional - will be ignored if SecretProviderClass not found)
+        - name: key-vault-secrets
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: postgres-secrets-provider
+---
+# Service Account for PostgreSQL (needed for Key Vault integration)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: postgres-sa
+  namespace: 3tirewebapp-dev
+  labels:
+    app: postgres
+---
+# Service remains the same
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: 3tirewebapp-dev
+  labels:
+    app: postgres
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+      protocol: TCP
+  selector:
+    app: postgres

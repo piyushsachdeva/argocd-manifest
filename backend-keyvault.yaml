@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: 3tirewebapp-dev
+  labels:
+    app: backend
+    app.kubernetes.io/name: 3tirewebapp
+    app.kubernetes.io/part-of: 3tirewebapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+        app.kubernetes.io/name: 3tirewebapp
+        app.kubernetes.io/part-of: 3tirewebapp
+    spec:
+      containers:
+        - name: backend
+          image: itsbaivab/backend:latest
+          ports:
+            - containerPort: 8080
+          env:
+            # Use Key Vault secrets for database connection
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-config
+                  key: DB_PORT
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials-from-kv
+                  key: POSTGRES_DB
+                  optional: true
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials-from-kv
+                  key: POSTGRES_USER
+                  optional: true
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials-from-kv
+                  key: POSTGRES_PASSWORD
+                  optional: true
+            # Fallback to traditional config if Key Vault secrets are not available
+            - name: DB_NAME_FALLBACK
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-config
+                  key: DB_NAME
+            - name: DB_USERNAME_FALLBACK
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-config
+                  key: DB_USERNAME
+            - name: DB_PASSWORD_FALLBACK
+              valueFrom:
+                secretKeyRef:
+                  name: backend-secret
+                  key: DB_PASSWORD
+            - name: SSL
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-config
+                  key: SSL
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-config
+                  key: PORT
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: 3tirewebapp-dev
+  labels:
+    app: backend
+    app.kubernetes.io/name: 3tirewebapp
+    app.kubernetes.io/part-of: 3tirewebapp
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    app: backend
