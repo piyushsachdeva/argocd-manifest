@@ -20,6 +20,6 @@ commonLabels:
 
 images:
   - name: itsbaivab/frontend
-    newTag: v2
+    newTag: v1
   - name: itsbaivab/backend
     newTag: latest
